@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')  # or any other GUI backend
 
-
 class ExtractPoints:
 
     def __init__(self, image_path):
@@ -34,9 +33,13 @@ class ExtractPoints:
 
             self.temp_horizontal_line, = self.ax.plot([0, self.image.shape[1]], [event.ydata, event.ydata], 'g--')
 
+            self.dragging = "x"
+
         elif self.axis_positions["y"] is None:
 
             self.temp_vertical_line, = self.ax.plot([event.xdata, event.xdata], [0, self.image.shape[0]], 'g--')
+
+            self.dragging = "y"
 
         plt.draw()
 
@@ -48,7 +51,7 @@ class ExtractPoints:
 
         if t1 - self.t0 > 0.5:  # Long press: > 0.5 seconds
 
-            if self.axis_positions["x"] is None:
+            if self.dragging == "x":
 
                 self.axis_positions["x"] = event.ydata
 
@@ -56,13 +59,15 @@ class ExtractPoints:
 
                 self.temp_horizontal_line.remove()
 
-            elif self.axis_positions["y"] is None:
+            elif self.dragging == "y":
 
                 self.axis_positions["y"] = event.xdata
 
                 self.vertical_line, = self.ax.plot([event.xdata, event.xdata], [0, self.image.shape[0]], 'r-')
 
                 self.temp_vertical_line.remove()
+
+            self.dragging = None
 
             plt.draw()
 
@@ -74,11 +79,27 @@ class ExtractPoints:
 
 
 
+    def on_motion(self, event):
+
+        if self.dragging == "x":
+
+            self.temp_horizontal_line.set_ydata([event.ydata, event.ydata])
+
+        elif self.dragging == "y":
+
+            self.temp_vertical_line.set_xdata([event.xdata, event.xdata])
+
+        plt.draw()
+
+
+
     def set_axis_values(self):
 
         self.fig.canvas.mpl_disconnect(self.press_event)
 
         self.fig.canvas.mpl_disconnect(self.release_event)
+
+        self.fig.canvas.mpl_disconnect(self.motion_event)
 
         x_value = float(input("Enter the x-coordinate value for the x-axis: "))
 
@@ -120,10 +141,11 @@ class ExtractPoints:
 
         self.release_event = self.fig.canvas.mpl_connect('button_release_event', self.on_release)
 
-        print("Long press to place the x-axis, then release. Do the same for the y-axis.")
+        self.motion_event = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
+
+        print("Long press to place the x-axis, then drag and release. Do the same for the y-axis.")
 
         plt.show()
-
 
 
 # Example usage
