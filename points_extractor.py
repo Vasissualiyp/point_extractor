@@ -6,6 +6,8 @@ import matplotlib
 matplotlib.use('TkAgg')  # or any other GUI backend
 
 
+
+
 class ExtractPoints:
 
     def __init__(self, image_path):
@@ -25,6 +27,13 @@ class ExtractPoints:
         self.dragging = None
 
         self.t0 = None
+    def start(self):
+        self.press_event = self.fig.canvas.mpl_connect('button_press_event', self.on_press)
+        self.release_event = self.fig.canvas.mpl_connect('button_release_event', self.on_release)
+        self.motion_event = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
+        print("Long press to place the x-axis, then drag and release. Do the same for the y-axis.")
+        plt.show()
+
 
 
 
@@ -96,46 +105,102 @@ class ExtractPoints:
 
 
 
+
     def pick_axis_points(self):
-
-        print("Click a point on the x-axis.")
-
-        self.axis_tick_event = self.fig.canvas.mpl_connect('button_press_event', self.set_axis_ticks)
-
-
-
-    def set_axis_ticks(self, event):
-
+    
+        print("Long press to place a point on the x-axis, then drag and release.")
+    
+        self.axis_tick_event = self.fig.canvas.mpl_connect('button_press_event', self.start_axis_tick_selection)
+    
+    
+    
+    def start_axis_tick_selection(self, event):
+    
+        self.t0 = time.time()
+    
         if self.axis_ticks["x"] is None:
-
-            self.axis_ticks["x"] = event.xdata
-
-            self.ax.plot([event.xdata, event.xdata], [self.axis_positions["x"] - 5, self.axis_positions["x"] + 5], 'k-')
-
-            x_value = float(input("Enter the x-coordinate value for the selected x-axis point: "))
-
-            self.axis_values["x"] = x_value
-
-            print("Click a point on the y-axis.")
-
+    
+            self.temp_x_tick, = self.ax.plot([event.xdata, event.xdata], [self.axis_positions["x"] - 5, self.axis_positions["x"] + 5], 'g-')
+    
+            self.dragging = "x_tick"
+    
         elif self.axis_ticks["y"] is None:
-
-            self.axis_ticks["y"] = event.ydata
-
-            self.ax.plot([self.axis_positions["y"] - 5, self.axis_positions["y"] + 5], [event.ydata, event.ydata], 'k-')
-
-            y_value = float(input("Enter the y-coordinate value for the selected y-axis point: "))
-
-            self.axis_values["y"] = y_value
-
-            self.calculate_scales()
-
+    
+            self.temp_y_tick, = self.ax.plot([self.axis_positions["y"] - 5, self.axis_positions["y"] + 5], [event.ydata, event.ydata], 'g-')
+    
+            self.dragging = "y_tick"
+    
+        plt.draw()
+    
+        self.axis_tick_release_event = self.fig.canvas.mp
+    
+    
+    
+    def finalize_axis_tick(self, event):
+    
+        t1 = time.time()
+    
+        if t1 - self.t0 > 0.5:  # Long press: > 0.5 seconds
+    
             self.fig.canvas.mpl_disconnect(self.axis_tick_event)
-
-            print("You can now click on points to get their coordinates.")
-
-            self.click_event = self.fig.canvas.mpl_connect('button_press_event', self.get_coordinates)
-
+    
+            self.fig.canvas.mpl_disconnect(self.axis_tick_release_event)
+    
+            if self.dragging == "x_tick":
+    
+                self.axis_ticks["x"] = event.xdata
+    
+                self.ax.plot([event.xdata, event.xdata], [self.axis_positions["x"] - 5, self.axis_positions["x"] + 5], 'k-')
+    
+                x_value = float(input("Enter the x-coordinate value for the selected x-axis point: "))
+    
+                self.axis_values["x"] = x_value
+    
+                print("Long press to place a point on the y-axis, then release.")
+    
+                self.pick_axis_points()
+    
+            elif self.dragging == "y_tick":
+    
+                self.axis_ticks["y"] = event.ydata
+    
+                self.ax.plot([self.axis_positions["y"] - 5, self.axis_positions["y"] + 5], [event.ydata, event.ydata], 'k-')
+    
+                y_value = float(input("Enter the y-coordinate value for the selected y-axis point: "))
+    
+                self.axis_values["y"] = y_value
+    
+                self.calculate_scales()
+    
+                print("You can now click on points to get their coordinates.")
+    
+                self.click_event = self.fig.canvas.mpl_connect('button_press_event', self.get_coordinates)
+    
+            self.dragging = None
+    
+            plt.draw()
+    
+    
+    
+    def on_motion(self, event):
+    
+        if self.dragging == "x":
+    
+            self.temp_horizontal_line.set_ydata([event.ydata, event.ydata])
+    
+        elif self.dragging == "y":
+    
+            self.temp_vertical_line.set_xdata([event.xdata, event.xdata])
+    
+        elif self.dragging == "x_tick":
+    
+            self.temp_x_tick.set_xdata([event.xdata, event.xdata])
+    
+        elif self.dragging == "y_tick":
+    
+            self.temp_y_tick.set_ydata([event.ydata, event.ydata])
+    
+        plt.draw()
 
 
     def calculate_scales(self):
@@ -156,17 +221,7 @@ class ExtractPoints:
 
 
 
-    def start(self):
 
-        self.press_event = self.fig.canvas.mpl_connect('button_press_event', self.on_press)
-
-        self.release_event = self.fig.canvas.mpl_connect('button_release_event', self.on_release)
-
-        self.motion_event = self.fig.canvas.mpl_connect('motion_notify_event', self.on_motion)
-
-        print("Long press to place the x-axis, then drag and release. Do the same for the y-axis.")
-
-        plt.show()
 
 
 
