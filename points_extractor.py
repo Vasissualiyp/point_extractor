@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')  # or any other GUI backend
 
+
 class ExtractPoints:
 
     def __init__(self, image_path):
@@ -16,6 +17,8 @@ class ExtractPoints:
         self.ax.imshow(self.image)
 
         self.axis_positions = {"x": None, "y": None}
+
+        self.axis_ticks = {"x": None, "y": None}
 
         self.axis_values = {"x": None, "y": None}
 
@@ -75,7 +78,7 @@ class ExtractPoints:
 
             if all(v is not None for v in self.axis_positions.values()):
 
-                self.set_axis_values()
+                self.pick_axis_points()
 
 
 
@@ -93,43 +96,61 @@ class ExtractPoints:
 
 
 
-    def set_axis_values(self):
+    def pick_axis_points(self):
 
-        self.fig.canvas.mpl_disconnect(self.press_event)
+        print("Click a point on the x-axis.")
 
-        self.fig.canvas.mpl_disconnect(self.release_event)
-
-        self.fig.canvas.mpl_disconnect(self.motion_event)
-
-        x_value = float(input("Enter the x-coordinate value for the x-axis: "))
-
-        y_value = float(input("Enter the y-coordinate value for the y-axis: "))
-
-        self.axis_values["x"] = x_value
-
-        self.axis_values["y"] = y_value
+        self.axis_tick_event = self.fig.canvas.mpl_connect('button_press_event', self.set_axis_ticks)
 
 
 
-        self.scale_x = self.axis_positions["y"] / x_value
+    def set_axis_ticks(self, event):
 
-        self.scale_y = self.axis_positions["x"] / y_value
+        if self.axis_ticks["x"] is None:
+
+            self.axis_ticks["x"] = event.xdata
+
+            self.ax.plot([event.xdata, event.xdata], [self.axis_positions["x"] - 5, self.axis_positions["x"] + 5], 'k-')
+
+            x_value = float(input("Enter the x-coordinate value for the selected x-axis point: "))
+
+            self.axis_values["x"] = x_value
+
+            print("Click a point on the y-axis.")
+
+        elif self.axis_ticks["y"] is None:
+
+            self.axis_ticks["y"] = event.ydata
+
+            self.ax.plot([self.axis_positions["y"] - 5, self.axis_positions["y"] + 5], [event.ydata, event.ydata], 'k-')
+
+            y_value = float(input("Enter the y-coordinate value for the selected y-axis point: "))
+
+            self.axis_values["y"] = y_value
+
+            self.calculate_scales()
+
+            self.fig.canvas.mpl_disconnect(self.axis_tick_event)
+
+            print("You can now click on points to get their coordinates.")
+
+            self.click_event = self.fig.canvas.mpl_connect('button_press_event', self.get_coordinates)
 
 
 
-        print("You can now click on points to get their coordinates.")
+    def calculate_scales(self):
 
-        self.click_event = self.fig.canvas.mpl_connect('button_press_event', self.get_coordinates)
+        self.scale_x = abs(self.axis_ticks["x"] - self.axis_positions["y"]) / self.axis_values["x"]
+
+        self.scale_y = abs(self.axis_ticks["y"] - self.axis_positions["x"]) / self.axis_values["y"]
 
 
 
     def get_coordinates(self, event):
 
-        x, y = event.xdata, event.ydata
+        plot_x = (event.xdata - self.axis_positions["y"]) / self.scale_x
 
-        plot_x = x / self.scale_x
-
-        plot_y = y / self.scale_y
+        plot_y = (self.axis_positions["x"] - event.ydata) / self.scale_y
 
         print(f"Point in plot coordinates: x = {plot_x}, y = {plot_y}")
 
@@ -146,6 +167,7 @@ class ExtractPoints:
         print("Long press to place the x-axis, then drag and release. Do the same for the y-axis.")
 
         plt.show()
+
 
 
 # Example usage
